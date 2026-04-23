@@ -1,0 +1,23 @@
+﻿<UserControl x:Class="TienViewer.Viewers.ExcelViewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 시트 탭 -->
+        <TabControl x:Name="SheetTabs" Grid.Row="0" Height="30"
+                    SelectionChanged="SheetTabs_SelectionChanged"/>
+
+        <!-- 데이터 그리드 -->
+        <DataGrid x:Name="DataGrid" Grid.Row="1"
+                  IsReadOnly="True"
+                  AutoGenerateColumns="True"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto"
+                  GridLinesVisibility="All"
+                  HeadersVisibility="Column"/>
+    </Grid>
+</UserControl>
