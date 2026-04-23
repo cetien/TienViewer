@@ -75,33 +75,28 @@ namespace TienViewer.Viewers
 		}
 
 		// =========================
-		// Zoom (마우스 휠, 포인터 기준)
+		// Zoom (마우스 휠 보정)
 		// =========================
 		private void Image_MouseWheel(object sender, MouseWheelEventArgs e)
 		{
-			if (MainImage.Source == null)
-				return;
+			if (MainImage.Source == null) return;
 
-			double zoomFactor = e.Delta > 0 ? 1.2 : 0.8;
-
-			// ⭐ 기준 좌표: RootGrid
-			var position = e.GetPosition(RootGrid);
-
+			double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
 			double newScale = Math.Clamp(_scale * zoomFactor, MinScale, MaxScale);
 
-			// ⭐ 핵심 공식 (안정 버전)
-			double dx = position.X - TranslateTransform.X;
-			double dy = position.Y - TranslateTransform.Y;
-
-			TranslateTransform.X -= dx * (newScale / _scale - 1);
-			TranslateTransform.Y -= dy * (newScale / _scale - 1);
+			// 현재 마우스 위치(RootGrid 기준)를 유지하며 확대/축소
+			Point relative = e.GetPosition(MainImage);
+			double abosoluteX = relative.X * _scale + TranslateTransform.X;
+			double abosoluteY = relative.Y * _scale + TranslateTransform.Y;
 
 			_scale = newScale;
-
-			// ⭐ 애니메이션 제거 (정확성 확보)
 			ScaleTransform.ScaleX = _scale;
 			ScaleTransform.ScaleY = _scale;
-		}
+
+			// 마우스 지점 보정
+			TranslateTransform.X = abosoluteX - relative.X * _scale;
+			TranslateTransform.Y = abosoluteY - relative.Y * _scale;
+		}       
 
 		private void AnimateScale(double targetScale)
 		{
@@ -156,31 +151,14 @@ namespace TienViewer.Viewers
 		// =========================
 		// Fit to Window
 		// =========================
-public void FitToWindow()
-{
-    if (MainImage.Source is not BitmapSource bmp)
-        return;
-
-    double containerWidth = RootGrid.ActualWidth;
-    double containerHeight = RootGrid.ActualHeight;
-
-    if (containerWidth <= 0 || containerHeight <= 0)
-        return;
-
-    double imageWidth = bmp.PixelWidth * (96.0 / bmp.DpiX);
-    double imageHeight = bmp.PixelHeight * (96.0 / bmp.DpiY);
-
-    double scaleX = containerWidth / imageWidth;
-    double scaleY = containerHeight / imageHeight;
-
-    _scale = Math.Min(scaleX, scaleY);
-
-    ScaleTransform.ScaleX = _scale;
-    ScaleTransform.ScaleY = _scale;
-
-    // ⭐ 중앙 기준이면 Translate 0
-    TranslateTransform.X = 0;
-    TranslateTransform.Y = 0;
-}
+		public void FitToWindow()
+		{
+			// Stretch="Uniform" 덕분에 변환값만 초기화하면 창에 꽉 찹니다.
+			_scale = 1.0;
+			ScaleTransform.ScaleX = 1.0;
+			ScaleTransform.ScaleY = 1.0;
+			TranslateTransform.X = 0;
+			TranslateTransform.Y = 0;
+		}
 	}
 }
