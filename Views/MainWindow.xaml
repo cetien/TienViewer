@@ -1,4 +1,4 @@
-﻿<Window x:Class="TienViewer.MainWindow"
+<Window x:Class="TienViewer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Tien Viewer" Height="700" Width="1100"
@@ -6,7 +6,7 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" MinWidth="150"/>
+            <ColumnDefinition Width="280" MinWidth="0"/>    <!-- ✅ MinWidth 150→0 -->
             <ColumnDefinition Width="4"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
@@ -16,6 +16,8 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="4"/>
+                <RowDefinition Height="Auto"/>
+                <!-- ✅ CheckBox 행 -->
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -24,8 +26,14 @@
                 <TreeView x:Name="FolderTree"
                           ItemsSource="{Binding RootNodes}"
                           SelectedItemChanged="FolderTree_SelectedItemChanged">
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                        </Style>
+                    </TreeView.ItemContainerStyle>
                     <TreeView.ItemTemplate>
-                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                        <HierarchicalDataTemplate ItemsSource="{Binding SubFolders}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Icon}" Margin="0,0,4,0"/>
                                 <TextBlock Text="{Binding Name}"/>
@@ -38,8 +46,22 @@
             <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch"
                           Background="#CCCCCC"/>
 
+            <!-- ✅ CheckBox: Row=2, FileList 바로 위 -->
+            <DockPanel Grid.Row="2" Margin="6,4">
+                <CheckBox x:Name="ShowAllFilesToggle"
+              Content="하위 폴더 포함"
+              DockPanel.Dock="Left"
+              Checked="ShowAllFilesToggle_Changed"
+              Unchecked="ShowAllFilesToggle_Changed"/>
+                <TextBlock x:Name="FileCountText"
+               DockPanel.Dock="Right"
+               HorizontalAlignment="Right"
+               Foreground="#888888"
+               FontSize="11"/>
+            </DockPanel>
+
             <!-- File List -->
-            <ListView x:Name="FileList" Grid.Row="2"
+            <ListView x:Name="FileList" Grid.Row="3"
                       SelectionChanged="FileList_SelectionChanged">
                 <ListView.View>
                     <GridView>

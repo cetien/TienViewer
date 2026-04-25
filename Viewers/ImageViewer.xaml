@@ -3,17 +3,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Black">
 
-    <Grid x:Name="RootGrid"
-          ClipToBounds="True">
+    <Grid x:Name="RootGrid" ClipToBounds="True"
+          MouseWheel="Image_MouseWheel"
+          MouseLeftButtonDown="Image_MouseLeftButtonDown"
+          MouseLeftButtonUp="Image_MouseLeftButtonUp"
+          MouseMove="Image_MouseMove"
+          MouseLeave="Image_MouseLeftButtonUp">
 
         <Image x:Name="MainImage"
-       Stretch="Uniform" 
-       RenderTransformOrigin="0.5,0.5"
-       MouseWheel="Image_MouseWheel"
-       MouseLeftButtonDown="Image_MouseLeftButtonDown"
-       MouseLeftButtonUp="Image_MouseLeftButtonUp"
-       MouseMove="Image_MouseMove"
-       MouseLeave="Image_MouseLeftButtonUp">
+               Stretch="Uniform"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               RenderTransformOrigin="0,0">
             <Image.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform x:Name="ScaleTransform" ScaleX="1" ScaleY="1"/>

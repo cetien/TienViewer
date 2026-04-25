@@ -1,26 +1,8 @@
-﻿/*
-ScrollViewer (스크롤은 비활성화)
- └── Border (클리핑)
-      └── Image
-           └── TransformGroup
-                ├── ScaleTransform  (Zoom)
-                └── TranslateTransform (Pan)
-
- 
-✔ 마우스 휠 → 확대/축소
-✔ 포인터 기준 zoom
-✔ 드래그 → 이동
-✔ 더블클릭 → Fit
-✔ 창 크기 변경 → 자동 Fit
-✔ 부드러운 확대 애니메이션
- */
-
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 
 using TienViewer.Models;
@@ -37,24 +19,22 @@ namespace TienViewer.Viewers
 		private Point _origin;
 		private bool _isDragging = false;
 
+		// WPF Stretch=Uniform이 배치한 이미지의 좌상단 오프셋
+		private double _baseOffsetX = 0;
+		private double _baseOffsetY = 0;
+
 		public ImageViewer(FileNode node)
 		{
 			InitializeComponent();
-
 			LoadImage(node);
 
-			//Loaded += (_, __) => FitToWindow();
 			Loaded += (_, __) =>
-			{
-				Dispatcher.BeginInvoke(new Action(FitToWindow),
-					System.Windows.Threading.DispatcherPriority.Loaded);
-			};
+				Dispatcher.BeginInvoke(new Action(ResetView),
+					System.Windows.Threading.DispatcherPriority.Render);
 
-			//SizeChanged += (_, __) => FitToWindow();
 			SizeChanged += (_, __) =>
 			{
-				if (_scale == 1.0) // 초기 상태만
-					FitToWindow();
+				if (_scale == 1.0) ResetView();
 			};
 		}
 
@@ -62,103 +42,147 @@ namespace TienViewer.Viewers
 		{
 			var bitmap = new BitmapImage();
 			bitmap.BeginInit();
-
 			if (node.IsVirtual && node.VirtualData != null)
 				bitmap.StreamSource = new MemoryStream(node.VirtualData);
 			else
 				bitmap.UriSource = new Uri(node.FullPath);
-
 			bitmap.CacheOption = BitmapCacheOption.OnLoad;
 			bitmap.EndInit();
-
 			MainImage.Source = bitmap;
 		}
 
-		// =========================
-		// Zoom (마우스 휠 보정)
-		// =========================
-		private void Image_MouseWheel(object sender, MouseWheelEventArgs e)
+		// 기준 오프셋 계산 (Stretch=Uniform 후 이미지 실제 좌상단)
+		private void UpdateBaseOffset()
 		{
-			if (MainImage.Source == null) return;
-
-			double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
-			double newScale = Math.Clamp(_scale * zoomFactor, MinScale, MaxScale);
-
-			// 현재 마우스 위치(RootGrid 기준)를 유지하며 확대/축소
-			Point relative = e.GetPosition(MainImage);
-			double abosoluteX = relative.X * _scale + TranslateTransform.X;
-			double abosoluteY = relative.Y * _scale + TranslateTransform.Y;
-
-			_scale = newScale;
-			ScaleTransform.ScaleX = _scale;
-			ScaleTransform.ScaleY = _scale;
-
-			// 마우스 지점 보정
-			TranslateTransform.X = abosoluteX - relative.X * _scale;
-			TranslateTransform.Y = abosoluteY - relative.Y * _scale;
-		}       
-
-		private void AnimateScale(double targetScale)
-		{
-			var anim = new DoubleAnimation
-			{
-				To = targetScale,
-				Duration = TimeSpan.FromMilliseconds(120),
-				EasingFunction = new QuadraticEase()
-			};
-
-			ScaleTransform.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, anim);
-			ScaleTransform.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, anim);
+			double cW = RootGrid.ActualWidth;
+			double cH = RootGrid.ActualHeight;
+			_baseOffsetX = (cW - MainImage.ActualWidth) / 2.0;
+			_baseOffsetY = (cH - MainImage.ActualHeight) / 2.0;
 		}
 
-		// =========================
-		// Pan (드래그 이동)
-		// =========================
-		private void Image_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+		// scale=1, TX=TY=0 리셋 (Stretch가 자동 Fit+중앙배치)
+		public void ResetView()
 		{
-			if (e.ClickCount == 2)
-			{
-				FitToWindow();
-				return;
-			}
-
-			_isDragging = true;
-			_start = e.GetPosition(this);
-			_origin = new Point(TranslateTransform.X, TranslateTransform.Y);
-
-			MainImage.CaptureMouse();
-			Cursor = Cursors.Hand;
-		}
-
-		private void Image_MouseMove(object sender, MouseEventArgs e)
-		{
-			if (!_isDragging)
-				return;
-
-			Vector v = e.GetPosition(this) - _start;
-
-			TranslateTransform.X = _origin.X + v.X;
-			TranslateTransform.Y = _origin.Y + v.Y;
-		}
-
-		private void Image_MouseLeftButtonUp(object sender, MouseEventArgs e)
-		{
-			_isDragging = false;
-			MainImage.ReleaseMouseCapture();
-			Cursor = Cursors.Arrow;
-		}
-
-		// =========================
-		// Fit to Window
-		// =========================
-		public void FitToWindow()
-		{
-			// Stretch="Uniform" 덕분에 변환값만 초기화하면 창에 꽉 찹니다.
 			_scale = 1.0;
 			ScaleTransform.ScaleX = 1.0;
 			ScaleTransform.ScaleY = 1.0;
 			TranslateTransform.X = 0;
 			TranslateTransform.Y = 0;
+			UpdateBaseOffset();
+		}
+
+		// 화면 좌표 → 이미지 로컬 좌표
+		private Point ScreenToImage(Point screen)
+		{
+			return new Point(
+				(screen.X - _baseOffsetX - TranslateTransform.X) / _scale,
+				(screen.Y - _baseOffsetY - TranslateTransform.Y) / _scale);
+		}
+
+		// 이미지가 화면에서 차지하는 Rect
+		private Rect GetImageScreenRect()
+		{
+			double w = MainImage.ActualWidth * _scale;
+			double h = MainImage.ActualHeight * _scale;
+			double x = _baseOffsetX + TranslateTransform.X;
+			double y = _baseOffsetY + TranslateTransform.Y;
+			return new Rect(x, y, w, h);
+		}
+
+		private void ClampTranslate()
+		{
+			double imgW = MainImage.ActualWidth * _scale;
+			double imgH = MainImage.ActualHeight * _scale;
+			double cW = RootGrid.ActualWidth;
+			double cH = RootGrid.ActualHeight;
+
+			if (imgW <= cW)
+				TranslateTransform.X = (cW - imgW) / 2.0 - _baseOffsetX;
+			else
+				TranslateTransform.X = Math.Clamp(TranslateTransform.X,
+					cW - imgW - _baseOffsetX,
+					-_baseOffsetX);
+
+			if (imgH <= cH)
+				TranslateTransform.Y = (cH - imgH) / 2.0 - _baseOffsetY;
+			else
+				TranslateTransform.Y = Math.Clamp(TranslateTransform.Y,
+					cH - imgH - _baseOffsetY,
+					-_baseOffsetY);
+		}
+
+		// =========================
+		// Zoom (Ctrl+Wheel)
+		// =========================
+		private void Image_MouseWheel(object sender, MouseWheelEventArgs e)
+		{
+			if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+				return;
+
+			e.Handled = true;
+			if (MainImage.Source == null) return;
+
+			double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
+			double newScale = Math.Clamp(_scale * zoomFactor, MinScale, MaxScale);
+			if (newScale == _scale) return;
+
+			Point mouseOnContainer = e.GetPosition(RootGrid);
+			Rect imageRect = GetImageScreenRect();
+
+			Point pivot = imageRect.Contains(mouseOnContainer)
+				? mouseOnContainer
+				: new Point(RootGrid.ActualWidth / 2.0, RootGrid.ActualHeight / 2.0);
+
+			// pivot 기준 이미지 로컬 좌표
+			double imgX = (pivot.X - _baseOffsetX - TranslateTransform.X) / _scale;
+			double imgY = (pivot.Y - _baseOffsetY - TranslateTransform.Y) / _scale;
+
+			_scale = newScale;
+			ScaleTransform.ScaleX = _scale;
+			ScaleTransform.ScaleY = _scale;
+
+			TranslateTransform.X = pivot.X - _baseOffsetX - imgX * _scale;
+			TranslateTransform.Y = pivot.Y - _baseOffsetY - imgY * _scale;
+
+			ClampTranslate();
+		}
+
+		// =========================
+		// Pan
+		// =========================
+		private void Image_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+		{
+			if (e.ClickCount == 2)
+			{
+				if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+				{
+					ResetView();
+					e.Handled = true;
+				}
+				return;
+			}
+
+			_isDragging = true;
+			_start = e.GetPosition(RootGrid);
+			_origin = new Point(TranslateTransform.X, TranslateTransform.Y);
+			RootGrid.CaptureMouse();
+			Cursor = Cursors.Hand;
+		}
+
+		private void Image_MouseMove(object sender, MouseEventArgs e)
+		{
+			if (!_isDragging) return;
+			Vector v = e.GetPosition(RootGrid) - _start;
+			TranslateTransform.X = _origin.X + v.X;
+			TranslateTransform.Y = _origin.Y + v.Y;
+			ClampTranslate();
+		}
+
+		private void Image_MouseLeftButtonUp(object sender, MouseEventArgs e)
+		{
+			_isDragging = false;
+			RootGrid.ReleaseMouseCapture();
+			Cursor = Cursors.Arrow;
 		}
 	}
 }
