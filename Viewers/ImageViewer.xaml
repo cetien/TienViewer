@@ -22,5 +22,14 @@
                 </TransformGroup>
             </Image.RenderTransform>
         </Image>
+
+        <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" 
+                Margin="2" Background="#80000000">
+            <TextBlock x:Name="TxtFileInfo" 
+                   Foreground="White" 
+                   FontSize="11" 
+                   Padding="2,2"
+                   Text="filename, 0 x 0"/>
+        </StackPanel>
     </Grid>
 </UserControl>

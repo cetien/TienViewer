@@ -38,6 +38,7 @@ namespace TienViewer.Viewers
 			};
 		}
 
+		// ImageViewer.xaml.cs의 LoadImage 메서드 수정
 		private void LoadImage(FileNode node)
 		{
 			var bitmap = new BitmapImage();
@@ -46,9 +47,20 @@ namespace TienViewer.Viewers
 				bitmap.StreamSource = new MemoryStream(node.VirtualData);
 			else
 				bitmap.UriSource = new Uri(node.FullPath);
+
 			bitmap.CacheOption = BitmapCacheOption.OnLoad;
 			bitmap.EndInit();
+
 			MainImage.Source = bitmap;
+
+			// --- 오버레이 정보 업데이트 코드 추가 ---
+			// 비트맵이 완전히 로드된 후 정보 추출
+			string fileName = node.Name;
+			int width = bitmap.PixelWidth;
+			int height = bitmap.PixelHeight;
+
+			TxtFileInfo.Text = $"{fileName}, {width} x {height}";
+			// --------------------------------------
 		}
 
 		// 기준 오프셋 계산 (Stretch=Uniform 후 이미지 실제 좌상단)

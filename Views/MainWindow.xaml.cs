@@ -42,7 +42,7 @@ namespace TienViewer
 					FolderTree.UpdateLayout();
 					if (_vm.SelectedFile != null)
 						FolderTree_SelectedItemChanged(FolderTree,
-							new RoutedPropertyChangedEventArgs<object>(null, _vm.SelectedFile));
+							new RoutedPropertyChangedEventArgs<object>(new object(), _vm.SelectedFile));
 				}
 			};
 		}
@@ -62,6 +62,11 @@ namespace TienViewer
 				sidebarCol.Width = new GridLength(0);
 				splitterCol.Width = new GridLength(0);
 				_isViewerFullscreen = true;
+
+				// 전체화면 진입
+				this.WindowStyle = WindowStyle.None;       // 상단 타이틀바 제거
+				this.ResizeMode = ResizeMode.NoResize;     // 크기 조절 비활성화 (전체화면 최적화)
+				this.WindowState = WindowState.Maximized;  // 전체 화면 확대
 			}
 			else
 			{
@@ -69,6 +74,10 @@ namespace TienViewer
 				sidebarCol.MinWidth = 150;        // ✅ MinWidth 복원
 				splitterCol.Width = new GridLength(4);
 				_isViewerFullscreen = false;
+
+				// 전체화면 해제 (일반 모드로 복귀)
+				this.WindowStyle = WindowStyle.SingleBorderWindow; // 원래 스타일
+				this.WindowState = WindowState.Normal;
 			}
 
 			e.Handled = true;
