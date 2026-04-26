@@ -31,7 +31,7 @@ namespace TienViewer
 
             ViewerArea.PreviewMouseDoubleClick += ViewerArea_DoubleClick;
             PreviewKeyDown += MainWindow_PreviewKeyDown;
-            ViewerArea.PreviewMouseWheel += ViewerArea_MouseWheel;
+            ViewerContainer.PreviewMouseWheel += ViewerArea_MouseWheel;
 
             // InfoPanel RenderTransform 코드에서 할당 (XAML 스코프 충돌 회피)
             InfoPanel.RenderTransform = _panelTranslate;
@@ -47,6 +47,7 @@ namespace TienViewer
                 if (!string.IsNullOrEmpty(path))
                 {
                     _vm.RestorePath(path);
+                    if (_vm.SelectedFile != null) _vm.SelectedFile.IsSelected = true;
                     FolderTree.UpdateLayout();
                     if (_vm.SelectedFile != null)
                         FolderTree_SelectedItemChanged(FolderTree,
@@ -362,6 +363,7 @@ namespace TienViewer
         {
             if (e.NewValue is not FileNode node) return;
 
+            node.IsSelected = true;
             _vm.SelectedFile = node;
             Title = $"TienViewer — {node.FullPath}";
 
@@ -442,6 +444,7 @@ namespace TienViewer
         {
             var virtualRoot = VirtualFileSystem.BuildFromZip(node.FullPath);
             _vm.RootNodes.Add(virtualRoot);
+            virtualRoot.IsSelected = true;
             return new EmptyViewer("ZIP 파일이 열렸습니다. 왼쪽 트리에서 탐색하세요.");
         }
 
