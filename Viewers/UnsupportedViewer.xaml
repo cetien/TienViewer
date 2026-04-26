@@ -1,0 +1,44 @@
+<UserControl x:Class="TienViewer.Viewers.UnsupportedViewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+        <StackPanel.Resources>
+            <Style TargetType="TextBlock">
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="Foreground" Value="Gray"/>
+            </Style>
+        </StackPanel.Resources>
+
+        <!-- 아이콘 -->
+        <TextBlock x:Name="IconText" Text="📄" FontSize="48" Margin="0,0,0,12"/>
+
+        <!-- 파일명 -->
+        <TextBlock x:Name="FileNameText" FontSize="14" FontWeight="SemiBold"
+                   Foreground="#555" Margin="0,0,0,6"/>
+
+        <!-- 안내 문구 -->
+        <TextBlock x:Name="DescText"
+                   Text="내장 뷰어가 없는 파일 형식입니다."
+                   FontSize="13" Margin="0,0,0,20"/>
+
+        <!-- ZIP 전용: 마운트 버튼 -->
+        <Button x:Name="MountButton"
+                Content="📂  마운트하기"
+                Click="Mount_Click"
+                Padding="20,8" FontSize="13"
+                HorizontalAlignment="Center"
+                Visibility="Collapsed"
+                Margin="0,0,0,8"/>
+
+        <!-- 외부 앱 열기 버튼 -->
+        <Button x:Name="OpenExternalButton"
+                Content="Windows 기본 앱으로 열기"
+                Click="OpenExternal_Click"
+                Padding="20,8" FontSize="13"
+                HorizontalAlignment="Center"/>
+
+        <!-- 힌트 -->
+        <TextBlock x:Name="HintText" FontSize="11" Foreground="#AAA"
+                   Margin="0,10,0,0" Visibility="Collapsed"/>
+    </StackPanel>
+</UserControl>

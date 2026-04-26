@@ -383,7 +383,18 @@ namespace TienViewer
             {
                 if (FileList.Items.Count > 0)
                 {
-                    FileList.SelectedIndex = 0;
+                    // ZIP이 아닌 첫 파일을 자동 선택 (ZIP은 더블클릭 전까지 마운트 방지)
+                    int selectIdx = 0;
+                    for (int i = 0; i < FileList.Items.Count; i++)
+                    {
+                        if (FileList.Items[i] is FileNode fn &&
+                            FileTypeHelper.GetViewerType(fn.Name) != ViewerType.Zip)
+                        {
+                            selectIdx = i;
+                            break;
+                        }
+                    }
+                    FileList.SelectedIndex = selectIdx;
                     FileList.ScrollIntoView(FileList.SelectedItem);
                 }
                 else
@@ -413,12 +424,41 @@ namespace TienViewer
             }
         }
 
+        // ZIP 여부를 Magic Number 포함해 판별하는 헬퍼 (파일 16바이트만 읽음)
+        private ViewerType DetectType(FileNode node)
+        {
+            if (node.IsVirtual && node.VirtualData != null)
+            {
+                int len = Math.Min(16, node.VirtualData.Length);
+                return FileTypeHelper.GetViewerType(node.Name, node.VirtualData[..len]);
+            }
+            if (!node.IsVirtual && System.IO.File.Exists(node.FullPath))
+            {
+                byte[] header = new byte[16];
+                int read;
+                using (var fs = System.IO.File.OpenRead(node.FullPath))
+                    read = fs.Read(header, 0, header.Length);
+                return FileTypeHelper.GetViewerType(node.Name, header[..read]);
+            }
+            return FileTypeHelper.GetViewerType(node.Name);
+        }
+
         private void FileList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (FileList.SelectedItem is not FileNode node) return;
             if (node.IsDirectory) return;
 
-            OpenFile(node);
+            // Magic Number 포함 판별 — 확장자가 .zip 아니어도 ZIP으로 처리
+            if (DetectType(node) == ViewerType.Zip)
+            {
+                var viewer = new UnsupportedViewer(node, isZip: true);
+                viewer.MountRequested += n => ViewerArea.Content = OpenZip(n);
+                ViewerArea.Content = viewer;
+            }
+            else
+            {
+                OpenFile(node);
+            }
 
             // 패널이 열려 있으면 내용 즉시 갱신
             if (_isPanelVisible)
@@ -427,7 +467,8 @@ namespace TienViewer
 
         private void OpenFile(FileNode node)
         {
-            var type = FileTypeHelper.GetViewerType(node.Name);
+            // DetectType 재사용 (ZIP은 SelectionChanged에서 이미 분기됨)
+            var type = DetectType(node);
 
             ViewerArea.Content = type switch
             {
@@ -435,8 +476,7 @@ namespace TienViewer
                 ViewerType.Text  => new TextViewer(node),
                 ViewerType.Pdf   => new PdfViewer(node),
                 ViewerType.Excel => new ExcelViewer(node),
-                ViewerType.Zip   => OpenZip(node),
-                _ => new EmptyViewer("지원하지 않는 파일 형식입니다.")
+                _                => new UnsupportedViewer(node),
             };
         }
 
