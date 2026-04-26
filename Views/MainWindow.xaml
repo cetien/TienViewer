@@ -1,17 +1,17 @@
 <Window x:Class="TienViewer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:TienViewer.Views"
         Title="Tien Viewer" Height="700" Width="1100"
-WindowStyle="None"
-ResizeMode="NoResize"
-WindowState="Maximized"
-Background="Black"
-        
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        WindowState="Maximized"
+        Background="Black"
         WindowStartupLocation="CenterScreen">
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" MinWidth="0"/>    <!-- ✅ MinWidth 150→0 -->
+            <ColumnDefinition Width="280" MinWidth="0"/>
             <ColumnDefinition Width="4"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
@@ -22,7 +22,6 @@ Background="Black"
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="4"/>
                 <RowDefinition Height="Auto"/>
-                <!-- ✅ CheckBox 행 -->
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -51,18 +50,18 @@ Background="Black"
             <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch"
                           Background="#CCCCCC"/>
 
-            <!-- ✅ CheckBox: Row=2, FileList 바로 위 -->
+            <!-- CheckBox 필터 -->
             <DockPanel Grid.Row="2" Margin="6,4">
                 <CheckBox x:Name="ShowAllFilesToggle"
-              Content="하위 폴더 포함"
-              DockPanel.Dock="Left"
-              Checked="ShowAllFilesToggle_Changed"
-              Unchecked="ShowAllFilesToggle_Changed"/>
+                          Content="하위 폴더 포함"
+                          DockPanel.Dock="Left"
+                          Checked="ShowAllFilesToggle_Changed"
+                          Unchecked="ShowAllFilesToggle_Changed"/>
                 <TextBlock x:Name="FileCountText"
-               DockPanel.Dock="Right"
-               HorizontalAlignment="Right"
-               Foreground="#888888"
-               FontSize="11"/>
+                           DockPanel.Dock="Right"
+                           HorizontalAlignment="Right"
+                           Foreground="#888888"
+                           FontSize="11"/>
             </DockPanel>
 
             <!-- File List -->
@@ -83,8 +82,21 @@ Background="Black"
         <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
                       Background="#CCCCCC"/>
 
-        <!-- 뷰어 영역 -->
-        <ContentControl x:Name="ViewerArea" Grid.Column="2"
-                        Margin="4"/>
+        <!-- 뷰어 영역 + 슬라이드-인 패널 컨테이너 -->
+        <Grid x:Name="ViewerContainer" Grid.Column="2"
+              MouseMove="ViewerContainer_MouseMove"
+              MouseLeave="ViewerContainer_MouseLeave">
+
+            <!-- 실제 뷰어 콘텐츠 -->
+            <ContentControl x:Name="ViewerArea" Margin="4"/>
+
+            <!-- 슬라이드-인 패널: RenderTransform은 코드비하인드에서 할당 -->
+            <views:FileInfoPanel x:Name="InfoPanel"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Stretch"
+                                 Width="260"
+                                 Opacity="0"
+                                 IsHitTestVisible="False"/>
+        </Grid>
     </Grid>
 </Window>

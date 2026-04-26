@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -13,12 +13,6 @@
     <PackageReference Include="PDFtoImage" Version="5.2.1" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
     <PackageReference Include="Ude.NetStandard" Version="1.2.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Page Update="Views\MainWindow.xaml">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Page>
   </ItemGroup>
 
 </Project>
