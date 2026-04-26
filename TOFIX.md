@@ -1,3 +1,4 @@
+- [x] UI 2026.4.25
 최근 폴더 복원 기능을 구현하고 트리뷰/파일 리스트의 필터링을 적용하기 위해 수정된 파일 목록과 주요 변경 사항은 다음과 같습니다.
 
 수정된 파일 목록
@@ -21,3 +22,22 @@ c:\Users\tien7\source\repos\TienViewer\Views\MainWindow.xaml.cs
 경로 저장 트리거: FolderTree_SelectedItemChanged 이벤트가 발생할 때마다 현재 선택된 폴더의 경로를 자동으로 저장합니다.
 파일 리스트 필터링: 하단 FileList(ListView)의 ItemsSource를 설정할 때 Where(c => !c.IsDirectory)를 사용하여 폴더를 제외한 파일만 표시되도록 수정했습니다.
 이제 앱을 재시작하면 마지막으로 탐색했던 폴더가 자동으로 열리고, 왼쪽 트리에는 폴더만, 아래쪽 리스트에는 파일만 표시되는 구조가 완성되었습니다.
+
+- [ ] Hex View
+UnsupportedViewer.xaml.cs 화면구성 예시. 
+|---------------------------------------|
+| **fileName**: example.txt             |
+| **filesize**: 128 KB                  |
+| **created date**: 2024-05-20          |
+| <button>Mount</button> <button>External Viewer</button> <button>Delete</button> |
+|---------------------------------------|
+| hex hex hex hex hex hex hex ascii     |
+| hex hex hex hex hex hex hex ascii     |
+| hex hex hex hex hex hex hex ascii     |
+|---------------------------------------|
+
+Mount: zip파일로 확인된 경우에만.
+hex: byte를 hex dump
+ascii: printable char로 변환 후 표시
+binary data는 1k bytes only
+
