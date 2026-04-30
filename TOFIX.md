@@ -23,21 +23,101 @@ c:\Users\tien7\source\repos\TienViewer\Views\MainWindow.xaml.cs
 파일 리스트 필터링: 하단 FileList(ListView)의 ItemsSource를 설정할 때 Where(c => !c.IsDirectory)를 사용하여 폴더를 제외한 파일만 표시되도록 수정했습니다.
 이제 앱을 재시작하면 마지막으로 탐색했던 폴더가 자동으로 열리고, 왼쪽 트리에는 폴더만, 아래쪽 리스트에는 파일만 표시되는 구조가 완성되었습니다.
 
-- [ ] Hex View
-UnsupportedViewer.xaml.cs 화면구성 예시. 
-|---------------------------------------|
-| **fileName**: example.txt             |
-| **filesize**: 128 KB                  |
-| **created date**: 2024-05-20          |
-| <button>Mount</button> <button>External Viewer</button> <button>Delete</button> |
-|---------------------------------------|
-| hex hex hex hex hex hex hex ascii     |
-| hex hex hex hex hex hex hex ascii     |
-| hex hex hex hex hex hex hex ascii     |
-|---------------------------------------|
+- [x] Hex View 2026.4.29
+UnsupportedViewer를 Hex Dump 뷰어로 전면 재구성.
 
-Mount: zip파일로 확인된 경우에만.
-hex: byte를 hex dump
-ascii: printable char로 변환 후 표시
-binary data는 1k bytes only
+수정된 파일 목록
+c:\Users\tien7\source\repos\TienViewer\Viewers\UnsupportedViewer.xaml
 
+레이아웃 변경: StackPanel → DockPanel. 상단 메타+버튼 영역(Border)과 하단 Hex 영역(ScrollViewer+ItemsControl) 분리.
+상단 메타 패널: fileName, fileSize, created date 표시.
+버튼 행: Mount (ZIP 전용, Collapsed), External Viewer, Delete (Virtual 파일 시 비활성화).
+Hex 패널: 열 헤더(Offset/Hex/ASCII) + ItemsControl, Consolas 고정폭 폰트, 다크 배경(#1E1E1E).
+c:\Users\tien7\source\repos\TienViewer\Viewers\UnsupportedViewer.xaml.cs
+
+이벤트 추가: DeleteRequested (Action<FileNode>) — MainWindow의 OnInfoPanel_Delete 패턴 재사용.
+LoadMeta(): FileInfo로 fileSize, creationTime 주입. VirtualNode는 VirtualData.Length 사용, created는 "(ZIP 내부)" 표시.
+LoadHex() / ReadFirst1K(): 최대 1024 bytes 읽기. Virtual/실제 파일 분기 처리.
+BuildHexLines(): 16바이트/행. 형식: {Offset:X8}  {hex 8컬럼 공백 8컬럼}  {ASCII}. 비인쇄 문자 → '.'.
+Delete_Click(): MessageBox 확인 후 DeleteRequested 발생. Virtual 파일이면 버튼 비활성.
+c:\Users\tien7\source\repos\TienViewer\Views\MainWindow.xaml.cs
+
+FileList_SelectionChanged: ZIP 뷰어 생성 시 viewer.DeleteRequested += OnInfoPanel_Delete 구독 추가.
+OpenFile(): ViewerType.Unsupported 분기를 switch 외부로 분리하여 DeleteRequested 구독 추가.
+
+- [x] 좌우 슬라이드 패널 + 앱 종료 버튼 2026.4.29
+
+수정된 파일 목록
+c:\Users\tien7\source\repos\TienViewer\Views\MainWindow.xaml
+
+레이아웃 전면 변경: 기존 3-Column Grid(사이드바 고정) → 단일 컬럼 ViewerContainer(전체화면) + 좌우 overlay 패널 구조.
+LeftPanel (Border): 폴더트리 + 파일리스트를 Width=280 overlay Border로 이동. HorizontalAlignment=Left, 초기 Opacity=0/IsHitTestVisible=False.
+InfoPanel: 기존과 동일, HorizontalAlignment=Right overlay 유지.
+GridSplitter 제거: overlay 구조이므로 컬럼 분리선 불필요.
+
+c:\Users\tien7\source\repos\TienViewer\Views\MainWindow.xaml.cs
+
+필드 추가: _isLeftPanelVisible, LeftPanelWidth(280), LeftTriggerZone(80), _leftPanelTranslate(TranslateTransform X=-280).
+생성자: LeftPanel.RenderTransform = _leftPanelTranslate 할당.
+ViewerContainer_MouseMove(): 오른쪽(기존) + 왼쪽 트리거 로직 통합. mouseX < 80이면 ShowLeftPanel(), mouseX > 280이면 HideLeftPanel().
+ViewerContainer_MouseLeave(): HideInfoPanel() + HideLeftPanel() 동시 호출.
+ShowLeftPanel/HideLeftPanel(): InfoPanel과 동일 패턴, TranslateTransform X: -280↔0 애니메이션.
+AnimatePanel(): 좌우 공통 정적 메서드 AnimatePanelX()로 리팩토링.
+ToggleFullScreen(): overlay 구조 전환으로 Column 조작 불필요 — 플래그 토글만 유지.
+_savedSidebarWidth 필드 제거.
+
+c:\Users\tien7\source\repos\TienViewer\Views\FileInfoPanel.xaml
+
+앱 종료 버튼 추가: BtnDelete 아래 Separator + BtnExit("⏻  앱 종료", DangerButton 스타일).
+
+c:\Users\tien7\source\repos\TienViewer\Views\FileInfoPanel.xaml.cs
+
+BtnExit_Click(): Application.Current.Shutdown() 호출.
+BtnDelete_Click(): 주석 처리된 MessageBox 코드 제거, DeleteRequested 직접 호출로 정리.
+
+- [x] MediaViewer + TextViewer IOException 수정 2026.4.29
+
+수정된 파일 목록
+c:\Users\tien7\source\repos\TienViewer\Viewers\TextViewer.xaml.cs
+  File.ReadAllBytes() → FileStream(FileShare.ReadWrite)으로 교체.
+  다른 프로세스가 쓰는 중인 파일(.log 등) IOException 해결.
+
+c:\Users\tien7\source\repos\TienViewer\Viewers\MediaViewer.xaml (신규)
+  MediaElement 기반 동영상/음악 플레이어.
+  컨트롤: 재생/일시정지, 정지, 시크바, 시간표시, 볼륨.
+  ZIP 내부 파일은 임시 경로로 추출 후 재생, Unloaded 시 정리.
+
+c:\Users\tien7\source\repos\TienViewer\Viewers\MediaViewer.xaml.cs (신규)
+  DispatcherTimer(500ms)로 시크바/시간 갱신.
+  SeekBar 드래그 중 타이머 갱신 일시 중단(_isSeeking).
+
+c:\Users\tien7\source\repos\TienViewer\Helpers\FileTypeHelper.cs
+  ViewerType.Media 추가.
+  Media 확장자: mp4, mkv, avi, mov, wmv, flv, webm, m4v, mp3, wav, flac, aac, ogg, wma, m4a.
+  Text 확장자 확장: html, htm, yaml, yml, ini, cfg, toml, sql, py, js, ts, css, sh, bat 추가.
+
+c:\Users\tien7\source\repos\TienViewer\Views\MainWindow.xaml.cs
+  OpenFile() switch에 ViewerType.Media => new MediaViewer(node) 추가.
+
+- [ ] 향후 구현 계획 (embed viewer)
+
+[ ] SVG Viewer
+    방법: SharpVectors.Wpf NuGet 패키지 (SharpVectors.Wpf)
+    대상: .svg
+    난이도: 낮음
+
+[ ] HTML Viewer (현대적 렌더링)
+    방법: Microsoft.Web.WebView2 NuGet 패키지 (Chromium/Edge 기반)
+    대상: .html, .htm (현재는 TextViewer로 소스 표시)
+    난이도: 낮음. Edge WebView2 런타임 필요.
+    비고: Markdown도 Markdig로 HTML 변환 후 WebView2로 표시 가능.
+
+[ ] Word/DOCX 뷰어
+    방법: DocumentFormat.OpenXml으로 파싱 → FlowDocument 렌더링
+    대상: .docx
+    난이도: 높음 (복잡한 서식 재현 어려움). 외부열기 병행 권장.
+
+[ ] 코덱 없는 동영상 재생 (mkv, flac 등)
+    현재 MediaElement는 Windows Media Foundation 의존 → H.264/AAC만 보장.
+    방법: LibVLCSharp.WPF NuGet 패키지 (코덱 내장)
+    난이도: 중간.

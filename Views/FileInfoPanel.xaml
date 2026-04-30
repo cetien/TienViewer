@@ -114,6 +114,12 @@
                         Style="{StaticResource DangerButton}"
                         Click="BtnDelete_Click"/>
 
+                <Separator Margin="0,12" Background="#333333"/>
+
+                <Button x:Name="BtnExit" Content="⏻  앱 종료"
+                        Style="{StaticResource DangerButton}"
+                        Click="BtnExit_Click"/>
+
             </StackPanel>
         </ScrollViewer>
     </Border>

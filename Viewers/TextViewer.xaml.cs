@@ -14,9 +14,23 @@ namespace TienViewer.Viewers
 		{
 			InitializeComponent();
 
-			byte[] data = node.IsVirtual && node.VirtualData != null
-				? node.VirtualData
-				: File.ReadAllBytes(node.FullPath);
+			byte[] data;
+			if (node.IsVirtual && node.VirtualData != null)
+			{
+				data = node.VirtualData;
+			}
+			else
+			{
+				// FileShare.ReadWrite — 다른 프로세스가 쓰는 중인 파일(e.g. .log)도 읽기 가능
+				using var fs = new FileStream(
+					node.FullPath,
+					FileMode.Open,
+					FileAccess.Read,
+					FileShare.ReadWrite);
+				using var ms = new MemoryStream();
+				fs.CopyTo(ms);
+				data = ms.ToArray();
+			}
 
 			var encoding = DetectEncoding(data) ?? Encoding.UTF8;
 			TextContent.Text = encoding.GetString(data);

@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="TienViewer.Viewers.PdfViewer"
+<UserControl x:Class="TienViewer.Viewers.PdfViewer"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid>
@@ -7,16 +7,34 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- 툴바 -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4">
-            <Button x:Name="BtnPrev" Content="◀ 이전" Click="BtnPrev_Click" Margin="2" Padding="6,2"/>
+            <Button x:Name="BtnPrev"  Content="◀ 이전" Click="BtnPrev_Click"  Margin="2" Padding="6,2"/>
             <TextBlock x:Name="PageInfo" VerticalAlignment="Center" Margin="8,0"/>
-            <Button x:Name="BtnNext" Content="다음 ▶" Click="BtnNext_Click" Margin="2" Padding="6,2"/>
+            <Button x:Name="BtnNext"  Content="다음 ▶" Click="BtnNext_Click"  Margin="2" Padding="6,2"/>
+
+            <Separator Width="1" Margin="8,2" Background="#555"/>
+
+            <Button Content="－" Click="BtnZoomOut_Click" Margin="2" Padding="6,2" FontFamily="Consolas"/>
+            <TextBlock x:Name="ZoomText" VerticalAlignment="Center" Margin="6,0" MinWidth="42"
+                       TextAlignment="Center"/>
+            <Button Content="＋" Click="BtnZoomIn_Click"  Margin="2" Padding="6,2" FontFamily="Consolas"/>
+            <Button Content="↺" Click="BtnZoomReset_Click" Margin="4,2,2,2" Padding="6,2"
+                    ToolTip="배율 초기화 (100%)"/>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1"
+        <!-- 뷰어: ScrollViewer + 확대 가능한 Image -->
+        <ScrollViewer x:Name="Scroll" Grid.Row="1"
                       HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto">
-            <Image x:Name="PageImage" Stretch="Uniform"/>
+                      VerticalScrollBarVisibility="Auto"
+                      PreviewMouseWheel="Scroll_PreviewMouseWheel">
+            <Image x:Name="PageImage"
+                   Stretch="None"
+                   RenderTransformOrigin="0,0">
+                <Image.RenderTransform>
+                    <ScaleTransform x:Name="ImageScale" ScaleX="1" ScaleY="1"/>
+                </Image.RenderTransform>
+            </Image>
         </ScrollViewer>
     </Grid>
 </UserControl>

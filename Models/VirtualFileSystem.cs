@@ -38,9 +38,19 @@ namespace TienViewer.Models
 				// 파일 노드
 				if (!string.IsNullOrEmpty(parts[0]))
 				{
-					using var stream = entry.Open();
-					using var ms = new System.IO.MemoryStream();
-					stream.CopyTo(ms);
+					byte[]? data = null;
+					try
+					{
+						// 100MB 이상의 파일은 메모리 보호를 위해 데이터를 직접 로드하지 않음 (선택 사항)
+						if (entry.Length > 0 && entry.Length < 100 * 1024 * 1024)
+						{
+							using var stream = entry.Open();
+							using var ms = new System.IO.MemoryStream();
+							stream.CopyTo(ms);
+							data = ms.ToArray();
+						}
+					}
+					catch { /* 데이터 로드 실패 시 노드만 생성하고 데이터는 null 유지 */ }
 
 					parent.Children.Add(new FileNode
 					{
@@ -48,7 +58,7 @@ namespace TienViewer.Models
 						FullPath = entry.FullName,
 						IsDirectory = false,
 						IsVirtual = true,
-						VirtualData = ms.ToArray()
+						VirtualData = data
 					});
 				}
 			}

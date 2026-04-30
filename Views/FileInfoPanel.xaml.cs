@@ -194,16 +194,12 @@ namespace TienViewer.Views
         private void BtnDelete_Click(object sender, RoutedEventArgs e)
         {
             if (_node == null) return;
+            DeleteRequested?.Invoke(_node);
+        }
 
-            //var r = MessageBox.Show(
-            //    $"'{_node.Name}' 을(를) 휴지통으로 이동하시겠습니까?",
-            //    "삭제 확인",
-            //    MessageBoxButton.YesNo,
-            //    MessageBoxImage.Warning);
-
-            //if (r == MessageBoxResult.Yes)
-            
-                DeleteRequested?.Invoke(_node);
+        private void BtnExit_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
         }
 
         private static string FormatSize(long bytes)

@@ -4,7 +4,7 @@ namespace TienViewer.Helpers
 {
     public enum ViewerType
     {
-        Image, Text, Pdf, Excel, Zip, Unsupported
+        Image, Text, Pdf, Excel, Zip, Media, Unsupported
     }
 
     public static class FileTypeHelper
@@ -16,10 +16,16 @@ namespace TienViewer.Helpers
             return ext switch
             {
                 ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".webp" => ViewerType.Image,
-                ".txt" or ".log" or ".md" or ".cs" or ".xml" or ".json" or ".csv" => ViewerType.Text,
+                ".txt" or ".log" or ".md" or ".cs" or ".xml" or ".json"
+                    or ".csv" or ".html" or ".htm" or ".yaml" or ".yml"
+                    or ".ini" or ".cfg" or ".toml" or ".sql" or ".py"
+                    or ".js" or ".ts" or ".css" or ".sh" or ".bat"        => ViewerType.Text,
                 ".pdf"  => ViewerType.Pdf,
                 ".xlsx" or ".xls" => ViewerType.Excel,
                 ".zip"  => ViewerType.Zip,
+                ".mp4" or ".mkv" or ".avi" or ".mov" or ".wmv" or ".flv"
+                    or ".webm" or ".m4v" or ".mp3" or ".wav" or ".flac"
+                    or ".aac" or ".ogg" or ".wma" or ".m4a"               => ViewerType.Media,
                 _       => ViewerType.Unsupported,
             };
         }

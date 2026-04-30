@@ -29,6 +29,7 @@ TienViewer/
     ├── EmptyViewer.xaml(.cs)
     ├── ImageViewer.xaml(.cs)
     ├── TextViewer.xaml(.cs)
+    ├── HexViewer.xaml(.cs)       # 신규: 미지원 파일 binary dump
     ├── PdfViewer.xaml(.cs)
     └── ExcelViewer.xaml(.cs)
 ```
@@ -121,10 +122,12 @@ Conversion.ToImage(stream, page: N)   // ← 'pageIndex' 파라미터명 사용 
 - [x] 뷰어 더블클릭 전체화면 토글
 - [x] 마우스 휠 파일 순차 탐색
 - [x] Delete 키 파일 삭제 (휴지통)
-- [x] **FileInfoPanel 슬라이드-인** (뷰어 우측 80px 진입 시 등장)
+- [x] **FileInfoPanel 슬라이드-인** (뷰어 우측 80px 진입 시 등장, Y 범위 15%~85%에서만 동작)
   - 파일 정보: 이름/크기/수정일/경로
   - 뷰어별 속성: 이미지(해상도/DPI/색깊이), PDF(페이지수), Excel(시트수/목록), Text(인코딩/줄수)
   - 작업: 탐색기 열기 / 이름 바꾸기 / 이동 / 삭제
+- [x] **TextViewer** — width 1000, 중앙 정렬, 상하 margin 50
+- [x] **HexViewer** (신규) — 미지원 파일 binary dump. width 1000, 중앙 정렬, 상하 margin 50. 16바이트/행, 8+8 중간 공백, ASCII 컬럼
 
 ## 미구현 / 개선 예정
 

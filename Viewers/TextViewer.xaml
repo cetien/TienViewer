@@ -1,14 +1,25 @@
 ﻿<UserControl x:Class="TienViewer.Viewers.TextViewer"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer>
-        <TextBox x:Name="TextContent"
-                 IsReadOnly="True"
-                 FontFamily="Consolas"
-                 FontSize="13"
-                 TextWrapping="Wrap"
-                 VerticalScrollBarVisibility="Auto"
-                 HorizontalScrollBarVisibility="Auto"
-                 BorderThickness="0"/>
+
+    <!--
+        외부 ScrollViewer : 뷰어 전체 스크롤
+        내부 Border       : width 1000, 중앙 정렬, 상하 margin 50
+    -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Auto">
+        <Border Width="1000"
+                HorizontalAlignment="Center"
+                Margin="0,50,0,50">
+            <TextBox x:Name="TextContent"
+                     IsReadOnly="True"
+                     FontFamily="Consolas"
+                     FontSize="13"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Disabled"
+                     HorizontalScrollBarVisibility="Disabled"
+                     BorderThickness="0"
+                     AcceptsReturn="True"/>
+        </Border>
     </ScrollViewer>
 </UserControl>

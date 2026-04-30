@@ -10,87 +10,200 @@
         WindowStartupLocation="CenterScreen">
 
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280" MinWidth="0"/>
-            <ColumnDefinition Width="4"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- 사이드바 -->
-        <Grid Grid.Column="0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="4"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-
-            <!-- Folder Tree -->
-            <Border Grid.Row="0" BorderBrush="#CCCCCC" BorderThickness="0,0,0,0">
-                <TreeView x:Name="FolderTree"
-                          ItemsSource="{Binding RootNodes}"
-                          SelectedItemChanged="FolderTree_SelectedItemChanged">
-                    <TreeView.ItemContainerStyle>
-                        <Style TargetType="TreeViewItem">
-                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                        </Style>
-                    </TreeView.ItemContainerStyle>
-                    <TreeView.ItemTemplate>
-                        <HierarchicalDataTemplate ItemsSource="{Binding SubFolders}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Icon}" Margin="0,0,4,0"/>
-                                <TextBlock Text="{Binding Name}"/>
-                            </StackPanel>
-                        </HierarchicalDataTemplate>
-                    </TreeView.ItemTemplate>
-                </TreeView>
-            </Border>
-
-            <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch"
-                          Background="#CCCCCC"/>
-
-            <!-- CheckBox 필터 -->
-            <DockPanel Grid.Row="2" Margin="6,4">
-                <CheckBox x:Name="ShowAllFilesToggle"
-                          Content="하위 폴더 포함"
-                          DockPanel.Dock="Left"
-                          Checked="ShowAllFilesToggle_Changed"
-                          Unchecked="ShowAllFilesToggle_Changed"/>
-                <TextBlock x:Name="FileCountText"
-                           DockPanel.Dock="Right"
-                           HorizontalAlignment="Right"
-                           Foreground="#888888"
-                           FontSize="11"/>
-            </DockPanel>
-
-            <!-- File List -->
-            <ListView x:Name="FileList" Grid.Row="3"
-                      SelectionChanged="FileList_SelectionChanged">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Header="이름" Width="160"
-                            DisplayMemberBinding="{Binding Name}"/>
-                        <GridViewColumn Header="유형" Width="60"
-                            DisplayMemberBinding="{Binding Icon}"/>
-                    </GridView>
-                </ListView.View>
-            </ListView>
-        </Grid>
-
-        <!-- 세로 구분선 -->
-        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
-                      Background="#CCCCCC"/>
-
-        <!-- 뷰어 영역 + 슬라이드-인 패널 컨테이너 -->
-        <Grid x:Name="ViewerContainer" Grid.Column="2"
+        <!-- 뷰어 영역 (전체) + 양쪽 슬라이드-인 패널 -->
+        <Grid x:Name="ViewerContainer"
               MouseMove="ViewerContainer_MouseMove"
               MouseLeave="ViewerContainer_MouseLeave">
 
             <!-- 실제 뷰어 콘텐츠 -->
             <ContentControl x:Name="ViewerArea" Margin="4"/>
 
-            <!-- 슬라이드-인 패널: RenderTransform은 코드비하인드에서 할당 -->
+            <!-- 왼쪽 슬라이드-인: 폴더트리 + 파일리스트 -->
+            <Border x:Name="LeftPanel"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Stretch"
+                    Width="280"
+                    Opacity="0"
+                    IsHitTestVisible="False"
+                    Background="#1E1E1E"
+                    BorderBrush="#333333"
+                    BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="4"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Folder Tree -->
+                    <TreeView x:Name="FolderTree" Grid.Row="0"
+                              ItemsSource="{Binding RootNodes}"
+                              SelectedItemChanged="FolderTree_SelectedItemChanged"
+                              Background="#1E1E1E"
+                              BorderThickness="0">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsExpanded"  Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                <Setter Property="IsSelected"  Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                <Setter Property="Foreground"  Value="#DDDDDD"/>
+                                <Setter Property="Background"  Value="Transparent"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TreeViewItem">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition/>
+                                                </Grid.RowDefinitions>
+                                                <!-- 헤더 행 -->
+                                                <Border x:Name="Bd" Grid.Row="0"
+                                                        Background="Transparent"
+                                                        Padding="2,2">
+                                                    <DockPanel>
+                                                        <ToggleButton x:Name="Expander"
+                                                                      DockPanel.Dock="Left"
+                                                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                                                      Width="16" Height="16"
+                                                                      Foreground="#888888"
+                                                                      Background="Transparent"
+                                                                      BorderThickness="0"
+                                                                      Focusable="False"
+                                                                      ClickMode="Press">
+                                                            <ToggleButton.Style>
+                                                                <Style TargetType="ToggleButton">
+                                                                    <Setter Property="Template">
+                                                                        <Setter.Value>
+                                                                            <ControlTemplate TargetType="ToggleButton">
+                                                                                <Border Background="Transparent">
+                                                                                    <TextBlock x:Name="Arrow"
+                                                                                               Text="▶"
+                                                                                               FontSize="9"
+                                                                                               Foreground="#888888"
+                                                                                               HorizontalAlignment="Center"
+                                                                                               VerticalAlignment="Center"/>
+                                                                                </Border>
+                                                                                <ControlTemplate.Triggers>
+                                                                                    <Trigger Property="IsChecked" Value="True">
+                                                                                        <Setter TargetName="Arrow" Property="Text" Value="▼"/>
+                                                                                    </Trigger>
+                                                                                </ControlTemplate.Triggers>
+                                                                            </ControlTemplate>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </Style>
+                                                            </ToggleButton.Style>
+                                                        </ToggleButton>
+                                                        <ContentPresenter x:Name="PART_Header"
+                                                                          ContentSource="Header"
+                                                                          HorizontalAlignment="Left"
+                                                                          VerticalAlignment="Center"/>
+                                                    </DockPanel>
+                                                </Border>
+                                                <!-- 자식 항목 -->
+                                                <ItemsPresenter x:Name="ItemsHost" Grid.Row="1"
+                                                                Margin="16,0,0,0"
+                                                                Visibility="Collapsed"/>
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsExpanded" Value="True">
+                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible"/>
+                                                </Trigger>
+                                                <Trigger Property="HasItems" Value="False">
+                                                    <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#3A3A3A"/>
+                                                </Trigger>
+                                                <MultiTrigger>
+                                                    <MultiTrigger.Conditions>
+                                                        <Condition Property="IsSelected" Value="True"/>
+                                                        <Condition Property="IsSelectionActive" Value="True"/>
+                                                    </MultiTrigger.Conditions>
+                                                    <Setter TargetName="Bd" Property="Background" Value="#0078D7"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </MultiTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding SubFolders}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Icon}" Margin="0,0,4,0"/>
+                                    <TextBlock Text="{Binding Name}"/>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+
+                    <GridSplitter Grid.Row="1" Height="4" HorizontalAlignment="Stretch"
+                                  Background="#444444"/>
+
+                    <!-- CheckBox 필터 + File List (DockPanel으로 묶어 Row2 전체 사용) -->
+                    <DockPanel Grid.Row="2">
+
+                        <!-- CheckBox 필터 행 -->
+                        <DockPanel DockPanel.Dock="Top" Margin="6,4">
+                            <CheckBox x:Name="ShowAllFilesToggle"
+                                      Content="하위 폴더 포함"
+                                      Foreground="#CCCCCC"
+                                      DockPanel.Dock="Left"
+                                      Checked="ShowAllFilesToggle_Changed"
+                                      Unchecked="ShowAllFilesToggle_Changed"/>
+                            <TextBlock x:Name="FileCountText"
+                                       DockPanel.Dock="Right"
+                                       HorizontalAlignment="Right"
+                                       Foreground="#888888"
+                                       FontSize="11"/>
+                        </DockPanel>
+
+                        <!-- File List — 나머지 전체 채움 -->
+                        <ListView x:Name="FileList"
+                                  SelectionChanged="FileList_SelectionChanged"
+                                  MouseDoubleClick="FileList_MouseDoubleClick"
+                                  Background="#1E1E1E" Foreground="#DDDDDD"
+                                  BorderThickness="0">
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="Foreground" Value="#DDDDDD"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListViewItem">
+                                                <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                                        Padding="2,3">
+                                                    <GridViewRowPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#2A2A2A"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#0078D7"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="이름" Width="180"
+                                        DisplayMemberBinding="{Binding Name}"/>
+                                    <GridViewColumn Header="유형" Width="50"
+                                        DisplayMemberBinding="{Binding Icon}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </DockPanel>
+                </Grid>
+            </Border>
+
+            <!-- 오른쪽 슬라이드-인: FileInfoPanel -->
             <views:FileInfoPanel x:Name="InfoPanel"
                                  HorizontalAlignment="Right"
                                  VerticalAlignment="Stretch"

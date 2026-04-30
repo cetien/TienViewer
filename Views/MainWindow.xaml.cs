@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 
+using System.Windows.Media;
 using TienViewer.Helpers;
 using TienViewer.Models;
 using TienViewer.Viewers;
@@ -15,26 +16,35 @@ namespace TienViewer
     {
         private readonly MainViewModel _vm = new();
 
-        private bool _isViewerFullscreen = false;
-        private GridLength _savedSidebarWidth;
-
-        // ── 패널 슬라이드 상태 ──
+        // ── 오른쪽 패널 슬라이드 상태 ──
         private bool _isPanelVisible = false;
         private const double PanelWidth = 260;
         private const double TriggerZone = 80;
         private readonly System.Windows.Media.TranslateTransform _panelTranslate = new() { X = PanelWidth };
+
+        // ── 왼쪽 패널 슬라이드 상태 ──
+        private bool _isLeftPanelVisible = false;
+        private const double LeftPanelWidth = 280;
+        private const double LeftTriggerZone = 80;
+        private readonly System.Windows.Media.TranslateTransform _leftPanelTranslate = new() { X = -LeftPanelWidth };
 
         public MainWindow()
         {
             InitializeComponent();
             DataContext = _vm;
 
-            ViewerArea.PreviewMouseDoubleClick += ViewerArea_DoubleClick;
             PreviewKeyDown += MainWindow_PreviewKeyDown;
             ViewerContainer.PreviewMouseWheel += ViewerArea_MouseWheel;
+            FileList.PreviewMouseWheel        += ViewerArea_MouseWheel;
+
+            // EmptyViewer 등 내용이 투명한 상태에서도 마우스 이벤트를 감지할 수 있도록 배경 설정 및 이벤트 연결
+            ViewerContainer.Background = Brushes.Transparent;
+            ViewerContainer.MouseMove += ViewerContainer_MouseMove;
+            ViewerContainer.MouseLeave += ViewerContainer_MouseLeave;
 
             // InfoPanel RenderTransform 코드에서 할당 (XAML 스코프 충돌 회피)
-            InfoPanel.RenderTransform = _panelTranslate;
+            InfoPanel.RenderTransform  = _panelTranslate;
+            LeftPanel.RenderTransform  = _leftPanelTranslate;
 
             // InfoPanel 이벤트 연결
             InfoPanel.DeleteRequested += OnInfoPanel_Delete;
@@ -57,71 +67,118 @@ namespace TienViewer
         }
 
         // ══════════════════════════════════════════════
-        //  슬라이드-인 패널 제어
+        //  슬라이드-인 패널 제어 (좌/우 공통)
         // ══════════════════════════════════════════════
 
         private void ViewerContainer_MouseMove(object sender, MouseEventArgs e)
         {
-            double containerWidth = ViewerContainer.ActualWidth;
-            double mouseX = e.GetPosition(ViewerContainer).X;
+            double containerWidth  = ViewerContainer.ActualWidth;
+            double containerHeight = ViewerContainer.ActualHeight;
+            var    pos             = e.GetPosition(ViewerContainer);
+            double mouseX          = pos.X;
+            double mouseY          = pos.Y;
 
-            bool shouldShow = (containerWidth - mouseX) < TriggerZone;
+            // 마우스가 패널 위에 있으면 해당 패널은 숨기지 않음
+            bool mouseOverRightPanel = _isPanelVisible   && mouseX >= containerWidth - PanelWidth;
+            bool mouseOverLeftPanel  = _isLeftPanelVisible && mouseX <= LeftPanelWidth;
 
-            if (shouldShow && !_isPanelVisible)
+            // Y 범위 15% ~ 85% 벗어나면 패널 숨김 (단, 패널 위에 있으면 면제)
+            double yLow    = containerHeight * 0.15;
+            double yHigh   = containerHeight * 0.85;
+            bool   inYRange = mouseY >= yLow && mouseY <= yHigh;
+
+            if (!inYRange)
+            {
+                if (!mouseOverRightPanel) HideInfoPanel();
+                if (!mouseOverLeftPanel)  HideLeftPanel();
+                return;
+            }
+
+            // ── 오른쪽 패널 ──
+            bool shouldShowRight = (containerWidth - mouseX) < TriggerZone;
+            if (shouldShowRight && !_isPanelVisible)
                 ShowInfoPanel();
-            else if (!shouldShow && _isPanelVisible && !IsCursorOverPanel(e))
+            else if (!shouldShowRight && _isPanelVisible && !mouseOverRightPanel)
                 HideInfoPanel();
+
+            // ── 왼쪽 패널 ──
+            bool shouldShowLeft = mouseX < LeftTriggerZone;
+            if (shouldShowLeft && !_isLeftPanelVisible)
+                ShowLeftPanel();
+            else if (!shouldShowLeft && _isLeftPanelVisible && !mouseOverLeftPanel)
+                HideLeftPanel();
         }
 
         private void ViewerContainer_MouseLeave(object sender, MouseEventArgs e)
         {
-            // 컨테이너 밖으로 나가면 패널 숨김
-            HideInfoPanel();
+            // ViewerContainer 밖으로 나갈 때: 패널 위로 포커스가 이동한 경우가 아닌지 확인
+            // InfoPanel / LeftPanel 은 ViewerContainer 의 자식이므로
+            // 실제로 창 바깥으로 나갈 때만 숨겨야 함
+            var posOnWindow = e.GetPosition(this);
+            bool leftWindow = posOnWindow.X < 0 || posOnWindow.Y < 0
+                           || posOnWindow.X > ActualWidth || posOnWindow.Y > ActualHeight;
+            if (leftWindow)
+            {
+                HideInfoPanel();
+                HideLeftPanel();
+            }
         }
 
-        private bool IsCursorOverPanel(MouseEventArgs e)
-        {
-            double mouseX = e.GetPosition(ViewerContainer).X;
-            double containerWidth = ViewerContainer.ActualWidth;
-            return mouseX >= containerWidth - PanelWidth;
-        }
+        // ── 오른쪽(Info) 패널 ──
 
         private void ShowInfoPanel()
         {
             if (_isPanelVisible) return;
             _isPanelVisible = true;
-
             InfoPanel.IsHitTestVisible = true;
-
-            // 패널 데이터 갱신
             var currentFile = FileList.SelectedItem as FileNode;
             InfoPanel.SetFile(currentFile, ViewerArea.Content as UIElement);
-
-            // 슬라이드-인 애니메이션
-            AnimatePanel(from: PanelWidth, to: 0, opacityFrom: 0, opacityTo: 1);
+            AnimatePanelX(_panelTranslate, InfoPanel, from: PanelWidth, to: 0, opacityFrom: 0, opacityTo: 1);
         }
 
         private void HideInfoPanel()
         {
             if (!_isPanelVisible) return;
             _isPanelVisible = false;
-
             InfoPanel.IsHitTestVisible = false;
-
-            // 슬라이드-아웃 애니메이션
-            AnimatePanel(from: 0, to: PanelWidth, opacityFrom: 1, opacityTo: 0);
+            AnimatePanelX(_panelTranslate, InfoPanel, from: 0, to: PanelWidth, opacityFrom: 1, opacityTo: 0);
         }
 
-        private void AnimatePanel(double from, double to, double opacityFrom, double opacityTo)
+        // ── 왼쪽(탐색) 패널 ──
+
+        private void ShowLeftPanel()
+        {
+            if (_isLeftPanelVisible) return;
+            _isLeftPanelVisible = true;
+            LeftPanel.IsHitTestVisible = true;
+            AnimatePanelX(_leftPanelTranslate, LeftPanel, from: -LeftPanelWidth, to: 0, opacityFrom: 0, opacityTo: 1);
+        }
+
+        private void HideLeftPanel()
+        {
+            if (!_isLeftPanelVisible) return;
+            _isLeftPanelVisible = false;
+            LeftPanel.IsHitTestVisible = false;
+            AnimatePanelX(_leftPanelTranslate, LeftPanel, from: 0, to: -LeftPanelWidth, opacityFrom: 1, opacityTo: 0);
+        }
+
+        // ── 공통 애니메이션 ──
+
+        private static void AnimatePanelX(
+            System.Windows.Media.TranslateTransform transform,
+            UIElement element,
+            double from, double to,
+            double opacityFrom, double opacityTo)
         {
             var duration = new Duration(TimeSpan.FromMilliseconds(180));
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var ease     = new CubicEase { EasingMode = EasingMode.EaseOut };
 
-            var translateAnim = new DoubleAnimation(from, to, duration) { EasingFunction = ease };
-            var opacityAnim   = new DoubleAnimation(opacityFrom, opacityTo, duration);
+            transform.BeginAnimation(
+                System.Windows.Media.TranslateTransform.XProperty,
+                new DoubleAnimation(from, to, duration) { EasingFunction = ease });
 
-            _panelTranslate.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, translateAnim);
-            InfoPanel.BeginAnimation(OpacityProperty, opacityAnim);
+            element.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(opacityFrom, opacityTo, duration));
         }
 
         // ══════════════════════════════════════════════
@@ -222,46 +279,8 @@ namespace TienViewer
         }
 
         // ══════════════════════════════════════════════
-        //  기존 로직 (변경 없음)
+        //  헬퍼 / 파일 로드
         // ══════════════════════════════════════════════
-
-        private void ViewerArea_DoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) return;
-
-            ToggleFullScreen();
-            e.Handled = true;
-        }
-
-        private void ToggleFullScreen()
-        {
-            var mainGrid = (Grid)Content;
-            var sidebarCol  = mainGrid.ColumnDefinitions[0];
-            var splitterCol = mainGrid.ColumnDefinitions[1];
-
-            if (!_isViewerFullscreen)
-            {
-                _savedSidebarWidth = sidebarCol.Width;
-                sidebarCol.MinWidth = 0;
-                sidebarCol.Width    = new GridLength(0);
-                splitterCol.Width   = new GridLength(0);
-                _isViewerFullscreen = true;
-
-                this.WindowStyle  = WindowStyle.None;
-                this.ResizeMode   = ResizeMode.NoResize;
-                this.WindowState  = WindowState.Maximized;
-            }
-            else
-            {
-                sidebarCol.Width    = _savedSidebarWidth;
-                sidebarCol.MinWidth = 150;
-                splitterCol.Width   = new GridLength(4);
-                _isViewerFullscreen = false;
-
-                this.WindowStyle = WindowStyle.SingleBorderWindow;
-                this.WindowState = WindowState.Normal;
-            }
-        }
 
         private async Task LoadChildrenRecursiveAsync(FileNode node)
         {
@@ -293,13 +312,6 @@ namespace TienViewer
 
         private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Escape && _isViewerFullscreen)
-            {
-                ToggleFullScreen();
-                e.Handled = true;
-                return;
-            }
-
             if (e.Key != Key.Delete) return;
             if (FileList.SelectedItem is not FileNode node) return;
             if (node.IsVirtual) return;
@@ -343,6 +355,13 @@ namespace TienViewer
         {
             if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) return;
             if (e.Handled) return;
+
+            // LeftPanel이 열려 있고 마우스가 패널 영역 안이면 TreeView/ListView 자체 스크롤에 위임
+            if (_isLeftPanelVisible)
+            {
+                double mouseX = e.GetPosition(ViewerContainer).X;
+                if (mouseX < LeftPanelWidth) return;
+            }
 
             int count = FileList.Items.Count;
             if (count == 0) return;
@@ -448,11 +467,11 @@ namespace TienViewer
             if (FileList.SelectedItem is not FileNode node) return;
             if (node.IsDirectory) return;
 
-            // Magic Number 포함 판별 — 확장자가 .zip 아니어도 ZIP으로 처리
+            // ZIP은 선택 시 UnsupportedViewer(hex+meta)만 표시 — 실제 마운트는 DoubleClick
             if (DetectType(node) == ViewerType.Zip)
             {
                 var viewer = new UnsupportedViewer(node, isZip: true);
-                viewer.MountRequested += n => ViewerArea.Content = OpenZip(n);
+                viewer.DeleteRequested += OnInfoPanel_Delete;
                 ViewerArea.Content = viewer;
             }
             else
@@ -465,26 +484,116 @@ namespace TienViewer
                 InfoPanel.SetFile(node, ViewerArea.Content as UIElement);
         }
 
+        private void FileList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (FileList.SelectedItem is not FileNode node) return;
+            if (node.IsDirectory) return;
+
+            if (DetectType(node) == ViewerType.Zip)
+            {
+                // ZIP → 마운트
+                ViewerArea.Content = OpenZip(node);
+            }
+            else
+            {
+                // 그 외 → 외부 뷰어
+                InvokeExternalViewer(node);
+            }
+        }
+
+        private void InvokeExternalViewer(FileNode node)
+        {
+            try
+            {
+                string targetPath;
+
+                if (node.IsVirtual && node.VirtualData != null)
+                {
+                    var ext = Path.GetExtension(node.Name);
+                    var tmp = Path.Combine(Path.GetTempPath(), $"TienViewer_{Guid.NewGuid()}{ext}");
+                    File.WriteAllBytes(tmp, node.VirtualData);
+                    App.RegisterTempFile(tmp);
+                    targetPath = tmp;
+                }
+                else if (!node.IsVirtual && File.Exists(node.FullPath))
+                {
+                    targetPath = node.FullPath;
+                }
+                else return;
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName        = targetPath,
+                    UseShellExecute = true,
+                };
+                try
+                {
+                    System.Diagnostics.Process.Start(psi);
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    psi.Verb = "openas";
+                    System.Diagnostics.Process.Start(psi);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"외부 앱 실행 실패: {ex.Message}", "오류",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void OpenFile(FileNode node)
         {
             // DetectType 재사용 (ZIP은 SelectionChanged에서 이미 분기됨)
             var type = DetectType(node);
 
-            ViewerArea.Content = type switch
+            if (type == ViewerType.Unsupported)
             {
-                ViewerType.Image => new ImageViewer(node),
-                ViewerType.Text  => new TextViewer(node),
-                ViewerType.Pdf   => new PdfViewer(node),
-                ViewerType.Excel => new ExcelViewer(node),
-                _                => new UnsupportedViewer(node),
-            };
+                var hv = new HexViewer(node);
+                hv.DeleteRequested += OnInfoPanel_Delete;
+                ViewerArea.Content = hv;
+            }
+            else
+            {
+                ViewerArea.Content = type switch
+                {
+                    ViewerType.Image => new ImageViewer(node),
+                    ViewerType.Text  => new TextViewer(node),
+                    ViewerType.Pdf   => new PdfViewer(node),
+                    ViewerType.Excel => new ExcelViewer(node),
+                    ViewerType.Media => new MediaViewer(node),
+                    _                => new HexViewer(node),
+                };
+            }
         }
 
         private UIElement OpenZip(FileNode node)
         {
             var virtualRoot = VirtualFileSystem.BuildFromZip(node.FullPath);
             _vm.RootNodes.Add(virtualRoot);
-            virtualRoot.IsSelected = true;
+
+            // TreeView 렌더링 후 수동으로 선택 & FileList 로드
+            Dispatcher.InvokeAsync(async () =>
+            {
+                virtualRoot.IsExpanded = true;
+                virtualRoot.IsSelected = true;
+                FolderTree.UpdateLayout();
+
+                // FolderTree_SelectedItemChanged가 IsSelected 바인딩으로 안 오는 경우를 대비해 직접 호출
+                await RefreshFileListAsync(virtualRoot);
+
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (FileList.Items.Count > 0)
+                    {
+                        FileList.SelectedIndex = 0;
+                        FileList.ScrollIntoView(FileList.SelectedItem);
+                    }
+                }, System.Windows.Threading.DispatcherPriority.Loaded);
+
+            }, System.Windows.Threading.DispatcherPriority.Loaded);
+
             return new EmptyViewer("ZIP 파일이 열렸습니다. 왼쪽 트리에서 탐색하세요.");
         }
 
